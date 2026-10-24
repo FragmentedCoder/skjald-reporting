@@ -1,0 +1,82 @@
+name: Phase 1
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "deploy/**"
+      - ".github/workflows/phase-1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend lint, type check and tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: pip install .[dev]
+      - name: Lint
+        run: ruff check .
+      - name: Type check
+        run: mypy app
+      - name: Test
+        run: pytest
+
+  frontend:
+    name: Frontend lint, type check and tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Type check
+        run: npm run check
+      - name: Test
+        run: npm run test
+      - name: Build
+        run: npm run build
+
+  browser:
+    name: Browser tests against the full stack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Throwaway master key (as install.sh makes it)
+        run: |
+          sudo install -d -o 10001 -g 10001 -m 0700 /etc/skjald
+          sudo sh -c 'head -c 32 /dev/urandom > /etc/skjald/master.key'
+          sudo chown 10001:10001 /etc/skjald/master.key
+          sudo chmod 0600 /etc/skjald/master.key
+      - name: Run Playwright against Caddy, the app and its database
+        run: frontend/e2e/run.sh
+      - name: Keep screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: e2e-results
+          path: frontend/e2e-results/
+          if-no-files-found: ignore

@@ -1,0 +1,39 @@
+services:
+  caddy:
+    build:
+      context: ..
+      dockerfile: deploy/caddy.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    environment:
+      SKJALD_ADDRESS: ${SKJALD_ADDRESS:-https://localhost}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+  app:
+    build:
+      context: ../backend
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      SKJALD_ADDRESS: ${SKJALD_ADDRESS:-https://localhost}
+      SKJALD_DATA_DIR: /data
+      SKJALD_MASTER_KEY_PATH: /etc/skjald/master.key
+    volumes:
+      - skjald_data:/data
+      - /etc/skjald:/etc/skjald:ro
+
+volumes:
+  caddy_data:
+  caddy_config:
+  skjald_data:

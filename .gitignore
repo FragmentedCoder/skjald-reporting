@@ -4,6 +4,8 @@
 !.env.example
 *.key
 *.pem
+*.crt
+*.cer
 *.pfx
 *.p12
 master.key
@@ -16,6 +18,7 @@ master.key
 *.db-wal
 *.db-shm
 /backups/
+.dev-data/
 
 # Python
 __pycache__/
@@ -35,6 +38,8 @@ build/
 node_modules/
 .svelte-kit/
 .vite/
+e2e-results/
+test-results/
 
 # Editors and OS
 .vscode/
